@@ -1,7 +1,7 @@
 import discord_slash
 import os
 from discord.ext import commands
-from token import token
+from mytoken import mytoken
 
 bot = commands.Bot(
     command_prefix="[]<>",
@@ -61,4 +61,4 @@ for filename in os.listdir("./cogs"):
 
 
 if __name__ == "__main__":
-    bot.run(token)
+    bot.run(mytoken)

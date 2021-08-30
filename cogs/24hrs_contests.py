@@ -20,7 +20,7 @@ class EventLoopCog(commands.Cog):
 
     @twenty_four_hour_loop.before_loop
     async def before_printer(self):
-        print('waiting...')
+        print(f'waiting for bot to start ({__name__})')
         await self.bot.wait_until_ready()
 
 
