@@ -1,0 +1,12 @@
+# visual studio file
+.vs
+
+# python virtual environment/compiled files
+venv/
+
+# Intellij/PyCharm config
+.idea/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
