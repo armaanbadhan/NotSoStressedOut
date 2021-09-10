@@ -1,0 +1,5 @@
+---
+applications:
+ - name: contest-reminders
+   random-route: true
+   memory: 256M

@@ -3,6 +3,7 @@
 
 # python virtual environment/compiled files
 venv/
+env/
 
 # Intellij/PyCharm config
 .idea/
@@ -11,5 +12,4 @@ venv/
 __pycache__/
 *.py[cod]
 
-# secret
-mytoken.py
+vcap-local.json

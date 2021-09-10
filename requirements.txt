@@ -1,4 +1,9 @@
-discord==1.6.0
+discord~=1.7.3
 discord-py-interactions==3.0.2
-humanfriendly==9.2
+humanfriendly
 requests
+apscheduler
+pytz
+Flask
+SQLAlchemy
+cloudant
