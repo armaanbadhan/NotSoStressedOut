@@ -97,7 +97,7 @@ async def on_component(ctx: ComponentContext):
     except ConflictingIdError:
         await ctx.send("Reminder already exists", hidden=True)
         return
-    await ctx.send(f"{ctx.author}:\nreminder set successfully for {contest_name}")
+    await ctx.send(f"{ctx.author}:\nreminder set successfully for {contest_name}", hidden=True)
 
 
 @slash.slash(
@@ -184,11 +184,10 @@ async def send_to_discord(channel_id: int, contest_name: str, user_id: int):
         await channel.send(f"<@!{user_id}>", embed=embed)
 
 
-@scheduler.scheduled_job("interval", hours=12, start_date='2021-10-10 10:00:00')
 async def send_24hrs_contests_discord():
     contests = get_data.in_24_hours()
     if contests:
-        channel = bot.get_channel(864017066901504030)
+        channel = await bot.fetch_channel(864017066901504030)
         buttons = [
             create_button(
                 style=ButtonStyle.blue,
@@ -202,6 +201,13 @@ async def send_24hrs_contests_discord():
             embed=embeds.e_contests(contests),
             components=rows
         )
+
+scheduler.add_job(
+    func=send_24hrs_contests_discord,
+    trigger="interval",
+    hours=12,
+    start_date='2021-10-10 22:00:00'
+)
 
 
 def start():
