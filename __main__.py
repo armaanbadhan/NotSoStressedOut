@@ -2,7 +2,7 @@ import os
 import pytz
 import json
 import discord
-import datetime
+# import datetime
 import discord_slash
 import discord.ext.commands as commands
 
@@ -13,6 +13,8 @@ from discord_slash.model import ButtonStyle
 from discord_slash.utils.manage_commands import create_option, create_choice
 from discord_slash.utils.manage_components import create_button, spread_to_rows, ComponentContext
 from apscheduler.jobstores.base import ConflictingIdError
+from discord.ext import tasks
+from datetime import datetime
 
 bot = commands.Bot(command_prefix="@#$%(*&^%")
 slash = discord_slash.SlashCommand(bot, sync_commands=True)
@@ -183,8 +185,10 @@ async def send_to_discord(channel_id: int, contest_name: str, user_id: int):
         )
         await channel.send(f"<@!{user_id}>", embed=embed)
 
-
+@tasks.loop(hours=1)
 async def send_24hrs_contests_discord():
+    if datetime.now().hour!=10 and datetime.now().hour!=22:
+        return
     contests = get_data.in_24_hours()
     if contests:
         channel = await bot.fetch_channel(864017066901504030)
@@ -202,17 +206,20 @@ async def send_24hrs_contests_discord():
             components=rows
         )
 
-scheduler.add_job(
-    func=send_24hrs_contests_discord,
-    trigger="interval",
-    hours=12,
-    start_date='2021-10-10 22:00:00'
-)
-
-
+# scheduler.add_job(
+#     func=send_24hrs_contests_discord,
+#     trigger="interval",
+#     hours=12,
+#     start_date='2021-10-10 22:00:00'
+# )
+@send_24hrs_contests_discord.before_loop
+async def before():
+    await bot.wait_until_ready()
+   
 def start():
     flask_thing.keep_alive()
-    scheduler.start()
+    send_24hrs_contests_discord.start()
+#     scheduler.start()
     bot.run(TOKEN)
 
 
