@@ -1,14 +1,10 @@
-import os
 import pytz
-import json
-import discord
 import datetime
 import discord_slash
 import discord.ext.commands as commands
 
-from cloudant import Cloudant
 from config import TOKEN, LOGGING_CHANNEL_ID, scheduler
-from utils import embeds, get_data, flask_thing
+from utils import embeds, get_data, flask_thing, contest_url
 from discord_slash.model import ButtonStyle
 from discord_slash.utils.manage_commands import create_option, create_choice
 from discord_slash.utils.manage_components import create_button, spread_to_rows, ComponentContext
@@ -19,31 +15,22 @@ slash = discord_slash.SlashCommand(bot, sync_commands=True)
 
 print("Initializing...")
 
-db_name = 'mydb'
-client = None
-db = None
 
-
-if 'VCAP_SERVICES' in os.environ:
-    vcap = json.loads(os.getenv('VCAP_SERVICES'))
-    print('Found VCAP_SERVICES')
-    if 'cloudantNoSQLDB' in vcap:
-        creds = vcap['cloudantNoSQLDB'][0]['credentials']
-        user = creds['username']
-        password = creds['password']
-        url = 'https://' + creds['host']
-        client = Cloudant(user, password, url=url, connect=True)
-        db = client.create_database(db_name, throw_on_exists=False)
-elif os.path.isfile('vcap-local.json'):
-    with open('vcap-local.json') as f:
-        vcap = json.load(f)
-        print('Found local VCAP_SERVICES')
-        creds = vcap['services']['cloudantNoSQLDB'][0]['credentials']
-        user = creds['username']
-        password = creds['password']
-        url = 'https://' + creds['host']
-        client = Cloudant(user, password, url=url, connect=True)
-        db = client.create_database(db_name, throw_on_exists=False)
+def get_button_rows(contests):
+    buttons = []
+    for x in range(1, len(contests) + 1):
+        name = contests[x - 1][1]
+        if len(name) > 75:
+            name = name[:74]
+        buttons.append(
+            create_button(
+                style=ButtonStyle.blue,
+                label=f"  {x}  ",
+                custom_id=f"{name};{contests[x - 1][3]}"
+            )
+        )
+    rows = spread_to_rows(*buttons)
+    return rows
 
 
 @bot.event
@@ -74,8 +61,8 @@ async def on_component(ctx: ComponentContext):
     if start_time_dt < datetime.datetime.now() + datetime.timedelta(hours=1):
         await ctx.send(f"less then one hour left for contest!", hidden=True)
         return
-    start_time_dt += datetime.timedelta(hours=5, minutes=30)       # to ist
-    start_time_dt -= datetime.timedelta(hours=1)                   # 1 hour reminder
+    start_time_dt += datetime.timedelta(hours=5, minutes=30)  # to ist
+    start_time_dt -= datetime.timedelta(minutes=20)  # 20 min reminder
     try:
         scheduler.add_job(
             func=send_to_discord,
@@ -117,14 +104,7 @@ async def upcoming(ctx, online_judge: discord_slash.SlashContext):
     await ctx.defer()
     contests = get_data.get_contests(str(online_judge))[1]
     if contests:
-        buttons = [
-            create_button(
-                style=ButtonStyle.blue,
-                label=f"  {x}  ",
-                custom_id=f"{contests[x - 1][1]};{contests[x - 1][3]}"
-            ) for x in range(1, len(contests) + 1)
-        ]
-        rows = spread_to_rows(*buttons)
+        rows = get_button_rows(contests)
         await ctx.send("**CLICK ON THE BUTTON TO SET REMINDER**", embed=embeds.e_contests(contests), components=rows)
     else:
         await ctx.send("no upcoming contests found")
@@ -160,14 +140,7 @@ async def next_twentyfourhours_slash(ctx):
     await ctx.defer()
     contests = get_data.in_24_hours()
     if contests:
-        buttons = [
-            create_button(
-                style=ButtonStyle.blue, 
-                label=f"  {x}  ",
-                custom_id=f"{contests[x-1][1]};{contests[x-1][3]}"
-            ) for x in range(1, len(contests) + 1)
-        ]
-        rows = spread_to_rows(*buttons)
+        rows = get_button_rows(contests)
         await ctx.send("**CLICK ON THE BUTTON TO SET REMINDER**", embed=embeds.e_contests(contests), components=rows)
     else:
         await ctx.send("no contests in next 24 hours")
@@ -175,44 +148,45 @@ async def next_twentyfourhours_slash(ctx):
 
 async def send_to_discord(channel_id: int, contest_name: str, user_id: int):
     channel = bot.get_channel(channel_id)
-    if channel:
-        embed = discord.Embed(
-            title=contest_name,
-            description="Starts in 20 minutes",
-            colour=0xff0000
+    button = [
+        create_button(
+            style=ButtonStyle.URL,
+            label="URL",
+            url=contest_url.contest_url(contest_name)
         )
-        await channel.send(f"<@!{user_id}>", embed=embed)
+    ]
+    row = spread_to_rows(*button)
+    await channel.send(f"<@!{user_id}>: {contest_name} starts in 20 minutes", components=row)
 
 
 async def send_24hrs_contests_discord():
+    # TODO: make a single function and call, for this and slash command
     contests = get_data.in_24_hours()
     if contests:
+        # TODO: add support for diff servers + diff channels w/ commands to sub/ unsub
         channel = await bot.fetch_channel(864017066901504030)
-        buttons = [
-            create_button(
-                style=ButtonStyle.blue,
-                label=f"  {x}  ",
-                custom_id=f"{contests[x - 1][1]};{contests[x - 1][3]}"
-            ) for x in range(1, len(contests) + 1)
-        ]
-        rows = spread_to_rows(*buttons)
+        rows = get_button_rows(contests)
         await channel.send(
             "**CONTESTS IN NEXT 24 HOURS\nCLICK ON THE BUTTON TO SET REMINDER**",
             embed=embeds.e_contests(contests),
             components=rows
         )
 
-scheduler.add_job(
-    func=send_24hrs_contests_discord,
-    trigger="interval",
-    hours=12,
-    start_date='2021-10-10 22:00:00'
-)
+
+def start_interval_job():
+    scheduler.add_job(
+        func=send_24hrs_contests_discord,
+        trigger="interval",
+        hours=12,
+        start_date='2021-09-24 22:00:00'
+        # TODO: wtf is this
+    )
 
 
 def start():
     flask_thing.keep_alive()
     scheduler.start()
+    start_interval_job()
     bot.run(TOKEN)
 
 
