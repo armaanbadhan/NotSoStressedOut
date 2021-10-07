@@ -6,5 +6,4 @@ apscheduler
 pytz
 Flask
 SQLAlchemy
-cloudant
 google

@@ -4,7 +4,7 @@ import discord_slash
 import discord.ext.commands as commands
 
 from config import TOKEN, LOGGING_CHANNEL_ID, scheduler
-from utils import embeds, get_data, flask_thing, contest_url
+from utils import embeds, get_data, contest_url
 from discord_slash.model import ButtonStyle
 from discord_slash.utils.manage_commands import create_option, create_choice
 from discord_slash.utils.manage_components import create_button, spread_to_rows, ComponentContext
@@ -178,13 +178,12 @@ def start_interval_job():
         func=send_24hrs_contests_discord,
         trigger="interval",
         hours=12,
-        start_date='2021-09-24 22:00:00'
+        start_date='2021-10-07 22:00:00'
         # TODO: wtf is this
     )
 
 
 def start():
-    flask_thing.keep_alive()
     scheduler.start()
     start_interval_job()
     bot.run(TOKEN)

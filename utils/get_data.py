@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime
 
 
 URLS = {
@@ -22,9 +23,15 @@ def get_contests(online_judge: str) -> (list, list):
     response = requests.get(URLS[online_judge])
     for contest in response.json():
         if contest["status"] == "BEFORE":
-            upcoming.append([online_judge, contest["name"], contest["url"], contest["start_time"], contest["duration"]])
+            if datetime.strptime(contest["start_time"][:-5], '%Y-%m-%dT%H:%M:%S') > datetime.now():
+                upcoming.append(
+                    [online_judge, contest["name"], contest["url"], contest["start_time"], contest["duration"]]
+                )
         else:
-            running.append([online_judge, contest["name"], contest["url"], contest["end_time"], -1])
+            if datetime.strptime(contest["end_time"][:-5], '%Y-%m-%dT%H:%M:%S') > datetime.now():
+                running.append(
+                    [online_judge, contest["name"], contest["url"], contest["end_time"], -1]
+                )
     return running, upcoming
 
 
@@ -37,5 +44,8 @@ def in_24_hours() -> list:
     response = requests.get("https://kontests.net/api/v1/all")
     for contest in response.json():
         if contest["in_24_hours"] == "Yes":
-            res.append([contest["site"], contest["name"], contest["url"], contest["start_time"], contest["duration"]])
+            if datetime.strptime(contest["start_time"][:-5], '%Y-%m-%dT%H:%M:%S') > datetime.now():
+                res.append(
+                    [contest["site"], contest["name"], contest["url"], contest["start_time"], contest["duration"]]
+                )
     return res

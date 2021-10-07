@@ -1,5 +1,7 @@
 ---
 applications:
  - name: contest-reminders
-   random-route: true
+   command: python __main__.py
+   no-route: true
+   health-check-type: process
    memory: 256M
